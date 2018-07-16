@@ -2,8 +2,7 @@
 Project for Week 2 of "Python Data Visualization".
 Read World Bank GDP data and create some basic XY plots.
 
-Be sure to read the project description page for further information
-about the expected behavior of the program.
+author: @eshrawan
 """
 
 import csv
@@ -49,9 +48,12 @@ def build_plot_values(gdpinfo, gdpdata):
     """
     list_ex = []
     for key, value in gdpdata.items():
-        if (value != ""):
-            if (int(key) <= gdpinfo["max_year"]) and (int(key)  >= gdpinfo["min_year"]):
-                list_ex.append((int(key), float(value)))
+        try:
+            if (value != ""):
+                if (int(key) <= gdpinfo["max_year"]) and (int(key)  >= gdpinfo["min_year"]):
+                    list_ex.append((int(key), float(value)))
+        except ValueError:
+            pass
 
     list_ex.sort(key = lambda pair: pair[0])
     return list_ex
@@ -72,7 +74,18 @@ def build_plot_dict(gdpinfo, country_list):
       CSV file should still be in the output dictionary, but
       with an empty XY plot value list.
     """
-    return {}
+    plot_dict = {}
+    plot_data = read_csv_as_nested_dict(gdpinfo["gdpfile"],
+                                       gdpinfo["country_name"],
+                                       gdpinfo["separator"], gdpinfo["quote"])
+    for country in country_list:
+        plot_dict[country] = []
+        for key, value in plot_data.items():
+            if key == country:
+                tuple_x = build_plot_values(gdpinfo, value)
+                plot_dict[country] = tuple_x
+
+    return plot_dict
 
 
 def render_xy_plot(gdpinfo, country_list, plot_file):
@@ -90,25 +103,18 @@ def render_xy_plot(gdpinfo, country_list, plot_file):
       specified by gdpinfo for the countries in country_list.
       The image will be stored in a file named by plot_file.
     """
-    return
+    plot = build_plot_dict(gdpinfo, country_list)
+    line_chart = pygal.XY(xrange=(1960, 2016))
+    line_chart.title = 'Plot of GDP for countries spanning 1960 to 2015'
+    line_chart.x_title = 'Year'
+    line_chart.y_title = 'GDP in current value of USD'
 
-
-def test_render_xy_plot():
-    """
-    Code to exercise render_xy_plot and generate plots from
-    actual GDP data.
-    """
-    gdpinfo = {
-        "gdpfile": "isp_gdp.csv",
-        "separator": ",",
-        "quote": '"',
-        "min_year": 1960,
-        "max_year": 2015,
-        "country_name": "Country Name",
-        "country_code": "Country Code"
-    }
-
-    render_xy_plot(gdpinfo, [], "isp_gdp_xy_none.svg")
-    render_xy_plot(gdpinfo, ["China"], "isp_gdp_xy_china.svg")
-    render_xy_plot(gdpinfo, ["United Kingdom", "United States"],
-                   "isp_gdp_xy_uk+usa.svg")
+    for country in country_list:
+        for key,item in plot.items():
+            try:
+                if (key != ""):
+                    if key == country:
+                        line_chart.add(key, item)
+            except ValueError:
+                pass
+    line_chart.render_to_file(plot_file)
